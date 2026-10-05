@@ -1,0 +1,29 @@
+services:
+
+  user-service:
+    build: ./user-service
+    container_name: fastapi-user
+    ports:
+      - "8001:8000"
+    networks:
+      - lostfound-network
+
+  item-service:
+    build: ./item-service
+    container_name: fastapi-item
+    ports:
+      - "8002:8000"
+    networks:
+      - lostfound-network
+
+  handover-service:
+    build: ./handover-service
+    container_name: fastapi-handover
+    ports:
+      - "8003:8000"
+    networks:
+      - lostfound-network
+
+networks:
+  lostfound-network:
+    driver: bridge

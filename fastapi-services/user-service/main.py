@@ -11,7 +11,7 @@ app = FastAPI(
 
 def get_connection():
     return mysql.connector.connect(
-        host="localhost",
+        host="host.docker.internal",
         user="root",
         password="",
         database="college_lost_found"

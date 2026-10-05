@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import mysql.connector
+import requests
 
 app = FastAPI(
     title="Lost & Found - Item Service",
@@ -11,7 +12,7 @@ app = FastAPI(
 
 def get_connection():
     return mysql.connector.connect(
-        host="localhost",
+        host="host.docker.internal",
         user="root",
         password="",
         database="college_lost_found"
@@ -113,4 +114,30 @@ def create_item(item: ItemCreate):
     return {
         "message": "Item created successfully",
         "item_id": new_item_id
+    }
+
+
+# 4. GET - Inter-service communication
+@app.get("/item-summary/{item_id}")
+def item_summary(item_id: int):
+
+    # Get item from Item Service database
+    item = get_item(item_id)
+
+    # Call User Service using Docker service name
+    user_response = requests.get(
+        "http://user-service:8000/users",
+        timeout=5
+    )
+
+    # Call Handover Service using Docker service name
+    handover_response = requests.get(
+        "http://handover-service:8000/handovers",
+        timeout=5
+    )
+
+    return {
+        "item": item,
+        "user_service": user_response.json(),
+        "handover_service": handover_response.json()
     }
