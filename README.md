@@ -2,65 +2,96 @@
 
 A containerized Lost and Found application developed as a three-microservice system and evaluated under varying workloads.
 
+This repository contains the **original PHP microservice implementation used for the performance experiment** and the **new Dockerized FastAPI implementation with Swagger/OpenAPI documentation, MySQL integration, and inter-service communication**.
+
 ## Project Overview
 
 The application is divided into three independent services:
 
-| Microservice | Responsibility | Host Port |
-|---|---|---:|
-| User Service | User-related operations | 8081 |
-| Item Service | Lost and found item operations | 8082 |
-| Handover Service | Item handover and return operations | 8083 |
+| Microservice | Responsibility | Original PHP Port | FastAPI Port |
+|---|---|---:|---:|
+| User Service | User-related operations | 8081 | 8001 |
+| Item Service | Lost and found item operations | 8082 | 8002 |
+| Handover Service | Item handover and return operations | 8083 | 8003 |
 
-Docker is used for containerization and Docker Compose is used to deploy the complete application. The three services communicate through a common Docker bridge network.
+### Original PHP Implementation
 
-The Item Service is used as the main endpoint for workload testing.
+The original implementation uses PHP 8.2 and Apache. These services were containerized with Docker Compose and used for the workload/performance experiment.
+
+### New FastAPI Implementation
+
+The new implementation is located in `fastapi-services/` and provides REST APIs, automatic Swagger documentation, MySQL connectivity, Dockerized deployment, and inter-service communication.
+
+The existing PHP implementation and previous performance results are preserved.
 
 ## Architecture
 
-```text
-                         Client
-                           |
-                           v
-                    +--------------+
-                    | Item Service |
-                    |    :8082     |
-                    +--------------+
-                      /          \
-                     /            \
-                    v              v
-          +---------------+   +------------------+
-          | User Service  |   | Handover Service |
-          |     :8081     |   |      :8083       |
-          +---------------+   +------------------+
-                    \              /
-                     \            /
-                      +----------+
-                      |  Docker  |
-                      |  Network |
-                      +----------+
-```
+![Lost and Found Microservices Architecture](architecture.png)
 
-The Item Service communicates with the other services using Docker service names:
+### FastAPI Service Flow
 
 ```text
-http://user-service/
-http://handover-service/
+                    PHP Web Frontend / Client
+                              |
+                              | HTTP
+                              v
+                   +------------------------+
+                   |      Item Service      |
+                   |        FastAPI        |
+                   |       Port 8002       |
+                   +-----------+------------+
+                               |
+                    +----------+----------+
+                    |                     |
+                  HTTP                  HTTP
+                    |                     |
+                    v                     v
+          +----------------+     +--------------------+
+          |  User Service  |     | Handover Service   |
+          |    FastAPI     |     |      FastAPI       |
+          |    Port 8001   |     |      Port 8003     |
+          +-------+--------+     +---------+----------+
+                  |                        |
+                  +-----------+------------+
+                              |
+                              v
+                       MySQL Database
+                     college_lost_found
 ```
 
-This avoids using localhost for communication between containers.
+Inside Docker, services communicate using service names:
+
+```text
+http://user-service:8000
+http://item-service:8000
+http://handover-service:8000
+```
+
+From the host machine:
+
+```text
+http://localhost:8001
+http://localhost:8002
+http://localhost:8003
+```
 
 ## Technologies
 
 | Technology | Purpose |
 |---|---|
-| PHP 8.2 | Microservice implementation |
-| Apache | Web server |
+| PHP 8.2 | Original microservice implementation |
+| Apache | Web server for original PHP services |
+| Python | FastAPI implementation |
+| FastAPI | REST API framework |
+| Uvicorn | FastAPI application server |
+| MySQL | Database |
+| mysql-connector-python | MySQL connectivity |
+| Requests | HTTP communication between services |
 | Docker | Containerization |
 | Docker Compose | Multi-container deployment |
 | Docker Bridge Network | Inter-service communication |
+| Swagger / OpenAPI | Interactive API documentation |
 | ApacheBench | Workload generation |
-| Python | Result processing |
 | Pandas | Result data handling |
 | Matplotlib | Graph generation |
 | Git | Version control |
@@ -72,52 +103,52 @@ This avoids using localhost for communication between containers.
 lostfound-microservices/
 │
 ├── docker-compose.yml
-├── generate_graphs.py
 ├── README.md
 │
-├── user-service/
+├── user-service/                    # Original PHP service
+│   ├── Dockerfile
+│   └── index.php
+├── item-service/                    # Original PHP service
+│   ├── Dockerfile
+│   └── index.php
+├── handover-service/                # Original PHP service
 │   ├── Dockerfile
 │   └── index.php
 │
-├── item-service/
-│   ├── Dockerfile
-│   └── index.php
+├── results/
+│   ├── workload_results.csv
+│   ├── response_time.png
+│   ├── throughput.png
+│   ├── cpu_utilization.png
+│   └── memory_utilization.png
 │
-├── handover-service/
-│   ├── Dockerfile
-│   └── index.php
-│
-└── results/
-    ├── workload_results.csv
-    ├── response_time.png
-    ├── throughput.png
-    ├── cpu_utilization.png
-    └── memory_utilization.png
+└── fastapi-services/                # New FastAPI implementation
+    ├── docker-compose.yml
+    ├── user-service/
+    │   ├── Dockerfile
+    │   ├── main.py
+    │   └── requirements.txt
+    ├── item-service/
+    │   ├── Dockerfile
+    │   ├── main.py
+    │   └── requirements.txt
+    └── handover-service/
+        ├── Dockerfile
+        ├── main.py
+        └── requirements.txt
 ```
 
-## Microservice Implementation
+# Original PHP Microservice Implementation
+
+The original three services remain in the repository.
 
 ### User Service
-
-The User Service provides a REST endpoint for user-service verification.
 
 ```text
 GET http://localhost:8081/
 ```
 
-Example response:
-
-```json
-{
-  "service": "User Service",
-  "status": "running",
-  "message": "User service is working"
-}
-```
-
 ### Item Service
-
-The Item Service is the main service used for the experiment. It also demonstrates inter-service communication by contacting the User Service and Handover Service.
 
 ```text
 GET http://localhost:8082/
@@ -125,25 +156,11 @@ GET http://localhost:8082/
 
 ### Handover Service
 
-The Handover Service provides a REST endpoint for handover-service verification.
-
 ```text
 GET http://localhost:8083/
 ```
 
-Example response:
-
-```json
-{
-  "service": "Handover Service",
-  "status": "running",
-  "message": "Handover service is working"
-}
-```
-
-## Docker Configuration
-
-Each microservice has its own Dockerfile.
+Each original service uses PHP 8.2 with Apache and has its own Dockerfile.
 
 ```dockerfile
 FROM php:8.2-apache
@@ -153,7 +170,7 @@ COPY index.php /var/www/html/index.php
 EXPOSE 80
 ```
 
-The three services are deployed using Docker Compose.
+Original container mapping:
 
 | Service | Container Name | Host Port | Container Port |
 |---|---|---:|---:|
@@ -161,86 +178,185 @@ The three services are deployed using Docker Compose.
 | Item Service | lostfound-item | 8082 | 80 |
 | Handover Service | lostfound-handover | 8083 | 80 |
 
-All three containers are connected to the Docker network:
+## FastAPI Microservices
+
+The new FastAPI implementation is located in:
 
 ```text
-lostfound-network
+fastapi-services/
 ```
 
-## Deployment
+There are exactly three independent FastAPI services.
 
-Start the complete application with:
+### User Service
+
+Manages user information stored in the MySQL `users` table.
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/users` | List users |
+| GET | `/users/{user_id}` | Get one user's details |
+| POST | `/users` | Create a new user |
+
+Swagger:
+
+```text
+http://localhost:8001/docs
+```
+
+### Item Service
+
+Manages lost and found item information stored in the MySQL `items` table.
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/items` | List items |
+| GET | `/items/{item_id}` | Get one item |
+| POST | `/items` | Create a new item |
+
+Swagger:
+
+```text
+http://localhost:8002/docs
+```
+
+### Handover Service
+
+Provides handover-related information.
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/handovers` | List handover details |
+| GET | `/handovers/{item_id}` | Get handover details for an item |
+
+Swagger:
+
+```text
+http://localhost:8003/docs
+```
+
+## FastAPI Database Configuration
+
+The services use the existing MySQL database:
+
+```text
+Database: college_lost_found
+User: root
+```
+
+For Docker execution, the services use:
+
+```python
+host="host.docker.internal"
+```
+
+so the containers can access MySQL running on the host machine.
+
+## Swagger / OpenAPI Documentation
+
+FastAPI automatically generates interactive API documentation.
+
+| Service | Swagger URL |
+|---|---|
+| User Service | http://localhost:8001/docs |
+| Item Service | http://localhost:8002/docs |
+| Handover Service | http://localhost:8003/docs |
+
+Swagger allows the evaluator to view endpoints, request bodies, parameters, and responses directly from the browser.
+
+## FastAPI Docker Configuration
+
+Each FastAPI service has its own Dockerfile and `requirements.txt`.
+
+Typical Dockerfile:
+
+```dockerfile
+FROM python:3.13-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY main.py .
+
+EXPOSE 8000
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+## FastAPI Docker Compose
+
+Navigate to:
+
+```powershell
+cd C:\xampp2\htdocs\lostfound-microservices\fastapi-services
+```
+
+Build:
+
+```powershell
+docker compose build
+```
+
+Start:
 
 ```powershell
 docker compose up -d
 ```
 
-Verify the running containers:
+Check containers:
 
 ```powershell
 docker ps
 ```
 
-The expected containers are:
+Expected FastAPI containers:
 
 ```text
-lostfound-user
-lostfound-item
-lostfound-handover
+fastapi-user
+fastapi-item
+fastapi-handover
 ```
 
-Stop the application with:
+Port mapping:
+
+| Service | Host Port | Container Port |
+|---|---:|---:|
+| User Service | 8001 | 8000 |
+| Item Service | 8002 | 8000 |
+| Handover Service | 8003 | 8000 |
+
+Stop:
 
 ```powershell
 docker compose down
 ```
 
-## REST API Verification
-
-The three services can be accessed independently:
-
-| Service | Endpoint |
-|---|---|
-| User Service | http://localhost:8081/ |
-| Item Service | http://localhost:8082/ |
-| Handover Service | http://localhost:8083/ |
-
 ## Inter-Service Communication
 
-The Item Service performs requests to:
+The FastAPI Item Service communicates with the other services using Docker service names.
 
 ```text
-http://user-service/
-http://handover-service/
+Item Service
+     |
+     +---- HTTP ----> User Service
+     |
+     +---- HTTP ----> Handover Service
 ```
 
-The final Item Service response contains the responses received from both services.
+Examples:
 
-Example:
-
-```json
-{
-  "service": "Item Service",
-  "status": "running",
-  "message": "Item service successfully communicated with other services",
-  "user_service": {
-    "service": "User Service",
-    "status": "running",
-    "message": "User service is working"
-  },
-  "handover_service": {
-    "service": "Handover Service",
-    "status": "running",
-    "message": "Handover service is working"
-  }
-}
+```text
+http://user-service:8000
+http://handover-service:8000
 ```
 
-This confirms communication between the microservices through the Docker network.
+This demonstrates service discovery and communication over the Docker network.
 
 ## Workload Testing Method
 
-ApacheBench was used to generate workload against the Item Service.
+ApacheBench was used to generate workload against the **original PHP Item Service**.
 
 Test endpoint:
 
@@ -248,15 +364,13 @@ Test endpoint:
 http://localhost:8082/
 ```
 
-Command format:
+Command:
 
 ```powershell
 & "C:\xampp2\apache\bin\ab.exe" -n 100 -c <concurrency> http://localhost:8082/
 ```
 
 Each workload used 100 total requests.
-
-The tested concurrency levels were:
 
 | Workload | Concurrent Requests |
 |---|---:|
@@ -266,14 +380,14 @@ The tested concurrency levels were:
 | W4 | 8 |
 | W5 | 16 |
 
-Docker resource utilization was observed using Docker statistics during the workload tests.
+Docker resource utilization was observed using Docker statistics.
+
+> **Important:** The performance values below are the original measured PHP/Docker experiment results. They are not FastAPI benchmark values, because the FastAPI implementation was added after those measurements.
 
 ## Measured Performance Results
 
-The following values are the measured results from the experiment.
-
 | Concurrent Requests | Avg Response Time (ms) | Throughput (req/s) | Failed Requests |
-|---:|---:|---:|---:|
+|---|---:|---:|---:|
 | 1 | 4.817 | 207.59 | 0 |
 | 2 | 4.724 | 423.35 | 0 |
 | 4 | 6.332 | 631.76 | 0 |
@@ -283,7 +397,7 @@ The following values are the measured results from the experiment.
 ## Container Resource Measurements
 
 | Concurrent Requests | Item CPU (%) | Item Memory (MiB) | Handover CPU (%) | Handover Memory (MiB) | User CPU (%) | User Memory (MiB) |
-|---:|---:|---:|---:|---:|---:|---:|
+|---|---:|---:|---:|---:|---:|---:|
 | 1 | 0.00 | 16.72 | 0.01 | 18.84 | 0.01 | 16.17 |
 | 2 | 0.01 | 16.26 | 0.01 | 19.08 | 0.01 | 16.90 |
 | 4 | 0.01 | 16.41 | 0.01 | 19.55 | 0.01 | 17.39 |
@@ -294,25 +408,17 @@ The following values are the measured results from the experiment.
 
 ### Average Response Time
 
-The response-time graph shows the measured average response time for each concurrency level.
-
 ![Concurrent Requests vs Average Response Time](results/response_time.png)
 
 ### Throughput
-
-The throughput graph shows the measured number of requests processed per second at each concurrency level.
 
 ![Concurrent Requests vs Throughput](results/throughput.png)
 
 ### CPU Utilization
 
-The CPU graph compares the measured CPU utilization of the three containers.
-
 ![Concurrent Requests vs CPU Utilization](results/cpu_utilization.png)
 
 ### Memory Utilization
-
-The memory graph compares memory usage across the three containers.
 
 ![Concurrent Requests vs Memory Utilization](results/memory_utilization.png)
 
@@ -320,51 +426,25 @@ The memory graph compares memory usage across the three containers.
 
 ### Response Time
 
-The average response time was low at the lower concurrency levels. It increased noticeably as the workload increased, reaching 24.594 ms at 16 concurrent requests.
-
-| Concurrent Requests | Response Time |
-|---:|---:|
-| 1 | 4.817 ms |
-| 2 | 4.724 ms |
-| 4 | 6.332 ms |
-| 8 | 14.116 ms |
-| 16 | 24.594 ms |
-
-The measurements show a clear increase in response time at higher concurrency.
+Average response time was low at lower concurrency and increased with workload, reaching **24.594 ms** at 16 concurrent requests.
 
 ### Throughput
 
-Throughput increased from 207.59 req/s at one concurrent request to 631.76 req/s at four concurrent requests.
-
-At eight concurrent requests, the measured throughput was 566.73 req/s. At sixteen concurrent requests, it increased to 650.55 req/s.
-
-The variation demonstrates that throughput does not necessarily increase linearly with concurrency.
+Throughput increased from **207.59 req/s** at one concurrent request to **631.76 req/s** at four concurrent requests. It varied at higher concurrency, showing that throughput does not necessarily increase linearly.
 
 ### Failed Requests
 
 No failed requests were recorded at any of the five tested workload levels.
 
-| Concurrent Requests | Failed Requests |
-|---:|---:|
-| 1 | 0 |
-| 2 | 0 |
-| 4 | 0 |
-| 8 | 0 |
-| 16 | 0 |
-
 ### CPU Utilization
 
-CPU utilization remained very low throughout the experiment.
-
-The recorded values were approximately 0.00–0.01% for the three services during the captured Docker statistics measurements.
+CPU utilization remained very low, approximately **0.00–0.01%** in the captured Docker statistics.
 
 ### Memory Utilization
 
-Memory usage remained relatively stable across the tested workloads.
+Memory remained comparatively stable. At 16 concurrent requests:
 
-At 16 concurrent requests:
-
-| Service | Memory Usage |
+| Service | Memory |
 |---|---:|
 | Item Service | 16.51 MiB |
 | Handover Service | 20.50 MiB |
@@ -374,64 +454,33 @@ The Handover Service recorded the highest memory utilization in the measured obs
 
 ## Result Files
 
-The complete measured dataset is stored in:
-
 ```text
 results/workload_results.csv
-```
-
-The generated visualizations are:
-
-```text
 results/response_time.png
 results/throughput.png
 results/cpu_utilization.png
 results/memory_utilization.png
 ```
 
-## Graph Generation
-
-The graphs are generated using:
-
-```text
-generate_graphs.py
-```
-
-The script processes the workload CSV using Pandas and creates the four performance visualizations using Matplotlib.
-
-To regenerate the graphs:
-
-```powershell
-python generate_graphs.py
-```
-
 ## Verification Commands
 
-Check running containers:
-
-```powershell
-docker ps
-```
-
-Check Docker images:
-
-```powershell
-docker images
-```
-
-Check Docker networks:
-
-```powershell
-docker network ls
-```
-
-Start the application:
+Original PHP services:
 
 ```powershell
 docker compose up -d
+docker ps
+docker network ls
 ```
 
-Stop the application:
+FastAPI services:
+
+```powershell
+cd C:\xampp2\htdocs\lostfound-microservices\fastapi-services
+docker compose up -d
+docker ps
+```
+
+Stop FastAPI:
 
 ```powershell
 docker compose down
@@ -439,15 +488,9 @@ docker compose down
 
 ## Experiment Outcome
 
-The three microservices were developed and independently containerized. Docker Compose was used to deploy the complete application, and a shared Docker network enabled communication between the services.
+The project demonstrates a complete three-microservice architecture with REST APIs, Docker containerization, Docker Compose deployment, Docker network communication, MySQL integration, Swagger documentation, inter-service HTTP communication, workload generation, resource monitoring, and performance analysis.
 
-The Item Service successfully communicated with both the User Service and Handover Service using Docker service names.
-
-Five workload levels were evaluated using ApacheBench. Response time, throughput, failed requests, CPU utilization, and memory utilization were recorded for the experiment.
-
-The measurements show that response time generally increases as concurrency increases. Throughput increased at lower workload levels and varied at higher concurrency. No failed requests were observed during the tested workloads. CPU utilization remained very low, while memory utilization remained comparatively stable.
-
-The experiment therefore demonstrates the complete process of developing, containerizing, deploying, connecting, load testing, monitoring, and analyzing a containerized microservice application.
+The original PHP implementation was used for the measured workload experiment, while the new FastAPI implementation provides a modern REST-based microservice layer with interactive Swagger documentation.
 
 ## Repository
 
