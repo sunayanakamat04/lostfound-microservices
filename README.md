@@ -26,7 +26,7 @@ The existing PHP implementation and previous performance results are preserved.
 
 ## Architecture
 
-![Lost and Found Microservices Architecture](architecture.png)
+
 
 ### FastAPI Service Flow
 
